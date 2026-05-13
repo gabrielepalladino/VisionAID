@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import 'package:main_app/pages/accessibility_provider.dart';
 
 class Support extends StatefulWidget {
@@ -14,43 +17,74 @@ class Support extends StatefulWidget {
 }
 
 class _SupportState extends State<Support> {
-  // ─── Endpoint ──────────────────────────────────────────────────────────────
-  static const String _apiUrl =
+  static const String _registerUrl =
+      'https://visionaid.altervista.org/register_user.php';
+  static const String _ticketUrl =
       'https://visionaid.altervista.org/create_ticket.php';
+  static const String _userIdKey       = 'anonymous_user_id';
+  static const String _userRegistered  = 'user_registered';
 
-  // ─── Categorie ─────────────────────────────────────────────────────────────
-  final List<String> _categories = [
-    'Problema tecnico',
-    'Errore nell\'app',
-    'Richiesta funzionalità',
-    'Account e accesso',
-    'Altro',
-  ];
+  final _formKey     = GlobalKey<FormState>();
+  final _emailCtrl   = TextEditingController();
+  final _subjectCtrl = TextEditingController();
+  final _messageCtrl = TextEditingController();
 
-  // ─── Controllers ───────────────────────────────────────────────────────────
-  final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
-  final _phoneCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
+  bool _isLoading = false;
 
-  String? _selectedCategory;
-  File?   _screenshot;
-  bool    _isLoading = false;
-
-  // ─── Screenshot picker ─────────────────────────────────────────────────────
-  Future<void> _pickScreenshot() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 70,
-      maxWidth: 1200,
-    );
-    if (picked != null) {
-      setState(() => _screenshot = File(picked.path));
+  // ─── Recupera o genera lo user_id persistente ─────────────────────────────
+  Future<String> _getOrCreateUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? userId = prefs.getString(_userIdKey);
+    if (userId == null) {
+      userId = const Uuid().v4();
+      await prefs.setString(_userIdKey, userId);
     }
+    return userId;
   }
 
-  void _removeScreenshot() => setState(() => _screenshot = null);
+  // ─── Registra l'utente al primo avvio (se non già fatto) ──────────────────
+  Future<void> _ensureUserRegistered(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_userRegistered) == true) return;
+
+    try {
+      // Recupera info dispositivo
+      final deviceInfo   = DeviceInfoPlugin();
+      final packageInfo  = await PackageInfo.fromPlatform();
+      final appVersion   = packageInfo.version;
+
+      String os          = 'other';
+      String deviceModel = 'unknown';
+
+      if (Platform.isAndroid) {
+        final info = await deviceInfo.androidInfo;
+        os          = 'android';
+        deviceModel = info.model;
+      } else if (Platform.isIOS) {
+        final info = await deviceInfo.iosInfo;
+        os          = 'ios';
+        deviceModel = info.utsname.machine;
+      }
+
+      final response = await http.post(
+        Uri.parse(_registerUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id':      userId,
+          'app_version':  appVersion,
+          'os':           os,
+          'device_model': deviceModel,
+        }),
+      ).timeout(const Duration(seconds: 20));
+
+      final body = jsonDecode(response.body);
+      if (response.statusCode == 200 && body['success'] == true) {
+        await prefs.setBool(_userRegistered, true);
+      }
+    } catch (_) {
+      // Registrazione fallita silenziosamente: riproverà al prossimo avvio
+    }
+  }
 
   // ─── Invio ticket ──────────────────────────────────────────────────────────
   Future<void> _submitTicket(AccessibilityProvider acc) async {
@@ -60,31 +94,27 @@ class _SupportState extends State<Support> {
     acc.triggerHapticFeedback();
 
     try {
-      final request = http.MultipartRequest('POST', Uri.parse(_apiUrl));
+      final userId = await _getOrCreateUserId();
+      await _ensureUserRegistered(userId);
 
-      request.fields['email'] = _emailCtrl.text.trim();
-      request.fields['phone'] = _phoneCtrl.text.trim();
-      request.fields['category'] = _selectedCategory ?? '';
-      request.fields['description'] = _descCtrl.text.trim();
+      final response = await http.post(
+        Uri.parse(_ticketUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': userId,
+          'email':   _emailCtrl.text.trim(),
+          'subject': _subjectCtrl.text.trim(),
+          'message': _messageCtrl.text.trim(),
+        }),
+      ).timeout(const Duration(seconds: 20));
 
-      // Screenshot in base64
-      if (_screenshot != null) {
-        final bytes = await _screenshot!.readAsBytes();
-        final b64 = base64Encode(bytes);
-        request.fields['screenshot_base64'] = b64;
-      }
-
-      final streamedResponse = await request.send().timeout(
-        const Duration(seconds: 20),
-      );
-      final response = await http.Response.fromStream(streamedResponse);
       final body = jsonDecode(response.body);
 
       if (response.statusCode == 200 && body['success'] == true) {
         acc.speak('Ticket inviato con successo.');
         _showResultDialog(
           success: true,
-          message: 'Ticket #${body['ticket_id']} creato!\nTi risponderemo all\'indirizzo email fornito.',
+          message: 'Ticket creato con successo!\nTi risponderemo al più presto.',
         );
         _resetForm();
       } else {
@@ -107,12 +137,8 @@ class _SupportState extends State<Support> {
 
   void _resetForm() {
     _emailCtrl.clear();
-    _phoneCtrl.clear();
-    _descCtrl.clear();
-    setState(() {
-      _selectedCategory = null;
-      _screenshot       = null;
-    });
+    _subjectCtrl.clear();
+    _messageCtrl.clear();
   }
 
   // ─── Dialog risultato ──────────────────────────────────────────────────────
@@ -162,8 +188,8 @@ class _SupportState extends State<Support> {
   @override
   void dispose() {
     _emailCtrl.dispose();
-    _phoneCtrl.dispose();
-    _descCtrl.dispose();
+    _subjectCtrl.dispose();
+    _messageCtrl.dispose();
     super.dispose();
   }
 
@@ -178,7 +204,7 @@ class _SupportState extends State<Support> {
       appBar: AppBar(
         backgroundColor: hc ? Colors.black : Colors.blue,
         foregroundColor: Colors.white,
-        title: Text(
+        title: const Text(
           'Supporto',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
@@ -197,18 +223,21 @@ class _SupportState extends State<Support> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Intestazione
-              _SectionHeader(text: 'Crea un nuovo ticket', hc: hc),
+              Text(
+                'Crea un nuovo ticket',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: hc ? Colors.white : Colors.black87,
+                ),
+              ),
               const SizedBox(height: 4),
               Text(
                 'Il nostro team ti risponderà il prima possibile.',
-                style: TextStyle(
-                  color: hc ? Colors.white54 : Colors.black45,
-                ),
+                style: TextStyle(color: hc ? Colors.white54 : Colors.black45),
               ),
               const SizedBox(height: 24),
 
-              // Email
               _buildLabel('Email', hc),
               const SizedBox(height: 6),
               _buildTextField(
@@ -217,8 +246,8 @@ class _SupportState extends State<Support> {
                 hint: 'tua@email.com',
                 keyboardType: TextInputType.emailAddress,
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Email obbligatoria';
-                  if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(v)) {
+                  if (v == null || v.trim().isEmpty) return 'Email obbligatoria';
+                  if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(v.trim())) {
                     return 'Email non valida';
                   }
                   return null;
@@ -226,28 +255,34 @@ class _SupportState extends State<Support> {
               ),
               const SizedBox(height: 16),
 
-              // Categoria
-              _buildLabel('Categoria', hc),
-              const SizedBox(height: 6),
-              _buildDropdown(hc),
-              const SizedBox(height: 16),
-
-              // Descrizione
-              _buildLabel('Descrizione', hc),
+              _buildLabel('Oggetto', hc),
               const SizedBox(height: 6),
               _buildTextField(
-                controller: _descCtrl,
+                controller: _subjectCtrl,
                 hc: hc,
-                hint: 'Descrivi il problema nel dettaglio...',
-                maxLines: 5,
+                hint: 'Es. App si blocca alla schermata iniziale',
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Descrizione obbligatoria';
+                  if (v == null || v.trim().isEmpty) return 'Oggetto obbligatorio';
+                  if (v.trim().length > 200) return 'Massimo 200 caratteri';
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // Bottone invio
+              _buildLabel('Messaggio', hc),
+              const SizedBox(height: 6),
+              _buildTextField(
+                controller: _messageCtrl,
+                hc: hc,
+                hint: 'Descrivi il problema nel dettaglio...',
+                maxLines: 6,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Messaggio obbligatorio';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 32),
+
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -265,7 +300,7 @@ class _SupportState extends State<Support> {
                       : const Icon(Icons.send),
                   label: Text(
                     _isLoading ? 'Invio in corso...' : 'Invia Ticket',
-                    style: TextStyle( fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: hc ? Colors.white : Colors.blue,
@@ -285,8 +320,6 @@ class _SupportState extends State<Support> {
       ),
     );
   }
-
-  // ─── Widget helpers ────────────────────────────────────────────────────────
 
   Widget _buildLabel(String text, bool hc) {
     return Text(
@@ -308,15 +341,13 @@ class _SupportState extends State<Support> {
   }) {
     return TextFormField(
       controller: controller,
-      keyboardType: keyboardType,
       maxLines: maxLines,
-      style: TextStyle( color: hc ? Colors.white : Colors.black87),
+      keyboardType: keyboardType,
+      style: TextStyle(color: hc ? Colors.white : Colors.black87),
       validator: validator,
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(
-          color: hc ? Colors.white38 : Colors.black38,
-        ),
+        hintStyle: TextStyle(color: hc ? Colors.white38 : Colors.black38),
         filled: true,
         fillColor: hc ? Colors.grey[900] : Colors.white,
         border: OutlineInputBorder(
