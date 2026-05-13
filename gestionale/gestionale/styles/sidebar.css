@@ -1,0 +1,462 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   sidebar.css
+   Foglio di stile dedicato alla sidebar del gestionale.
+   Richiede che le variabili CSS di gestionale.css (o equivalente) siano
+   già caricate nel documento, oppure importa questo file DOPO gestionale.css.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── CONTENITORE PRINCIPALE ──────────────────────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition:
+    width           var(--transition),
+    background      var(--transition),
+    border-color    var(--transition);
+}
+
+.sidebar.collapsed {
+  width: var(--sidebar-w-mini);
+}
+
+/* ── HEADER / LOGO ───────────────────────────────────────────────────────── */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px 16px;
+  min-height: 64px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  transition: border-color var(--transition), padding var(--transition);
+}
+
+.sidebar.collapsed .sidebar-header {
+  justify-content: center;
+  padding: 20px 0 16px;
+}
+
+/* Logo mark (quadrato colorato con lettera) */
+.logo-mark {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  background: var(--accent);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent);
+  transition:
+    background  var(--transition),
+    opacity     var(--transition),
+    width       var(--transition),
+    min-width   var(--transition);
+  flex-shrink: 0;
+}
+
+/* FIX: nasconde il logo-mark quando la sidebar è collassata */
+.sidebar.collapsed .logo-mark {
+  opacity: 0;
+  width: 0;
+  min-width: 0;
+  pointer-events: none;
+}
+
+/* Testo logo */
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  overflow: hidden;
+  transition:
+    opacity   var(--transition),
+    transform var(--transition);
+}
+
+.sidebar.collapsed .logo-text {
+  opacity: 0;
+  transform: translateX(-8px);
+  pointer-events: none;
+}
+
+.logo-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+
+.logo-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+}
+
+/* ── PULSANTE COLLASSA/ESPANDI ───────────────────────────────────────────── */
+.toggle-btn {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  transition:
+    background     .15s,
+    color          .15s,
+    border-color   .15s,
+    transform      var(--transition);
+}
+
+.toggle-btn:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+  border-color: transparent;
+}
+
+/* Freccia ruota quando collassata; auto su entrambi i lati per centrarlo */
+.sidebar.collapsed .toggle-btn {
+  transform: rotate(180deg);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── NAVIGAZIONE ─────────────────────────────────────────────────────────── */
+.sidebar-nav {
+  flex: 1;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Etichetta sezione (es. "MENU") */
+.nav-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+  padding: 8px 8px 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: opacity var(--transition);
+}
+
+.sidebar.collapsed .nav-section-label {
+  opacity: 0;
+}
+
+/* Voce di menu */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.nav-item:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.nav-item.active {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+/* Variante pericolo (logout) */
+.nav-item.danger:hover {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+/* Icona voce */
+.nav-icon {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  flex-shrink: 0;
+}
+
+/* Testo voce */
+.nav-text {
+  flex: 1;
+  transition:
+    opacity   var(--transition),
+    transform var(--transition);
+}
+
+.sidebar.collapsed .nav-text {
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
+}
+
+/* Badge contatore (es. ticket aperti) */
+.nav-badge {
+  margin-left: auto;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: 'DM Mono', monospace;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity var(--transition);
+}
+
+.sidebar.collapsed .nav-badge {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── TOOLTIP (solo quando collassata) ────────────────────────────────────── */
+.sidebar.collapsed .nav-item[data-tooltip]:hover::after,
+.sidebar.collapsed .theme-toggle[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--text);
+  color: var(--surface);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 200;
+  animation: fadeTooltip .15s forwards;
+}
+
+@keyframes fadeTooltip {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+/* ── FOOTER ──────────────────────────────────────────────────────────────── */
+.sidebar-footer {
+  padding: 10px 10px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: border-color var(--transition);
+}
+
+.sidebar-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 8px;
+  transition: background var(--transition);
+}
+
+/* ── TOGGLE TEMA ─────────────────────────────────────────────────────────── */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  width: 100%;
+  position: relative;
+  transition: background .15s, color .15s;
+}
+
+.theme-toggle:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.theme-toggle .nav-icon {
+  color: inherit;
+}
+
+/* Testo toggle tema */
+.theme-toggle-text {
+  flex: 1;
+  text-align: left;
+  transition:
+    opacity   var(--transition),
+    transform var(--transition);
+}
+
+.sidebar.collapsed .theme-toggle-text {
+  opacity: 0;
+  transform: translateX(-6px);
+  pointer-events: none;
+}
+
+/* Pill switch (rettangolo scorrevole) */
+.theme-switch {
+  width: 32px;
+  height: 18px;
+  background: var(--border);
+  border-radius: 9px;
+  position: relative;
+  flex-shrink: 0;
+  transition: background .2s;
+}
+
+.theme-switch::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  top: 3px;
+  left: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+  transition: transform .2s;
+}
+
+/* Stato scuro: pill colorata + pallino spostato */
+[data-theme="dark"] .theme-switch {
+  background: var(--accent);
+}
+
+[data-theme="dark"] .theme-switch::after {
+  transform: translateX(14px);
+}
+
+/* Nasconde il pill quando sidebar è collassata (non c'è spazio) */
+.sidebar.collapsed .theme-switch {
+  display: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — Mobile (≤768px)
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Hamburger — nascosto su desktop */
+.sidebar-hamburger {
+  display: none;
+  position: fixed;
+  top: 14px;
+  left: 14px;
+  z-index: 200;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  box-shadow: var(--shadow);
+  transition: background .15s, color .15s;
+}
+
+.sidebar-hamburger:hover {
+  background: var(--accent-light);
+  color: var(--accent);
+}
+
+/* Overlay scuro dietro la sidebar su mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 99;
+  backdrop-filter: blur(2px);
+}
+
+.sidebar-overlay.visible {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  /* Mostra hamburger */
+  .sidebar-hamburger {
+    display: flex;
+  }
+
+  /* Sidebar fuori schermo di default; ignora lo stato collapsed su mobile */
+  .sidebar,
+  .sidebar.collapsed {
+    transform: translateX(-100%);
+    width: var(--sidebar-w) !important;
+    transition:
+      transform       var(--transition),
+      background      var(--transition),
+      border-color    var(--transition);
+  }
+
+  /* Sidebar aperta tramite .open aggiunto via JS */
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Il main occupa tutta la larghezza */
+  .main-content,
+  .main-content.collapsed {
+    margin-left: 0 !important;
+    padding: 68px 16px 24px;
+  }
+}

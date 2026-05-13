@@ -1,0 +1,20 @@
+name: test1
+description: VisionAid app for blind assistance
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  camera: ^0.11.3
+  flutter_tts: ^4.0.2
+  image: ^4.1.7
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/yolov8n.onnx
+    - assets/labelmap.txt
