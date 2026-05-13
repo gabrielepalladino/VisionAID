@@ -30,7 +30,6 @@ class AccessibilityPage extends StatelessWidget {
                   const SizedBox(height: 16),
                   _buildVoiceGuidanceTile(context),
                   const SizedBox(height: 16),
-                  _buildHapticFeedbackTile(context),
                 ],
               ),
             ),
@@ -143,24 +142,6 @@ class AccessibilityPage extends StatelessWidget {
       onChanged: (value) {
         accessibilityProvider.setVoiceGuidance(value);
         accessibilityProvider.triggerHapticFeedback();
-      },
-    );
-  }
-
-  Widget _buildHapticFeedbackTile(BuildContext context) {
-    final accessibilityProvider = Provider.of<AccessibilityProvider>(context);
-    
-    return _buildSwitchTile(
-      context: context,
-      title: 'Feedback tattile',
-      subtitle: 'Vibrazioni per confermare le azioni',
-      icon: Icons.vibration,
-      value: accessibilityProvider.hapticFeedback,
-      onChanged: (value) {
-        accessibilityProvider.setHapticFeedback(value);
-        accessibilityProvider.speak(
-          value ? 'Feedback tattile attivato' : 'Feedback tattile disattivato',
-        );
       },
     );
   }

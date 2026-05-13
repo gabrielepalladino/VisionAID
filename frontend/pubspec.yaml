@@ -6,6 +6,7 @@ version: 1.0.0+1
 environment:
   sdk: ^3.9.2
 dependencies:
+  uuid: ^4.4.0
   flutter:
     sdk: flutter
   flutter_tts: ^4.0.0
@@ -15,6 +16,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   http: ^1.2.0
   image_picker: ^1.2.1
+  device_info_plus: ^11.2.0
+  package_info_plus: ^8.1.2
 
 dev_dependencies:
   flutter_test:
