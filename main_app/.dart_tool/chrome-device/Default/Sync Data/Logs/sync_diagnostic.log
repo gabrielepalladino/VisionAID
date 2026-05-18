@@ -1,0 +1,11 @@
+2025-12-24 12:31:29.467: [INFO][Sync] Reset engine, reason: 8
+2025-12-24 12:31:29.467: [INFO][Sync] Stopped: Bookmarks
+2025-12-24 12:31:29.467: [INFO][Sync] Stopped: Preferences
+2025-12-24 12:31:29.467: [INFO][Sync] Stopped: Passwords
+2025-12-24 12:31:29.467: [INFO][Sync] Stopped: Autofill Profiles
+2025-12-24 12:31:29.467: [INFO][Sync] Stopped: Autofill
+2025-12-24 12:31:29.467: [INFO][Sync] Stopped: Extensions
+2025-12-24 12:31:29.467: [INFO][Sync] Stopped: Sessions
+2025-12-24 12:31:29.467: [INFO][Sync] Stopped: Extension settings
+2025-12-24 12:31:29.467: [INFO][Sync] Stopped: History Delete Directives
+2025-12-24 12:31:29.467: [INFO][Sync] Stopped: Device Info
