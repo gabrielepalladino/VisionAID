@@ -387,7 +387,7 @@ Future<void> _submitTicket(AccessibilityProvider acc) async {
     );
   }
 
-  Widget _buildDropdown(bool hc) {
+  /*Widget _buildDropdown(bool hc) {
     return DropdownButtonFormField<String>(
       value: _selectedCategory,
       dropdownColor: hc ? Colors.grey[900] : Colors.white,
@@ -444,4 +444,5 @@ class _SectionHeader extends StatelessWidget {
       ),
     );
   }
+}*/
 }
