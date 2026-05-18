@@ -43,19 +43,19 @@ class _SupportState extends State<Support> {
   }
 
   // ─── Registra l'utente al primo avvio (se non già fatto) ──────────────────
-  Future<void> _ensureUserRegistered(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool(_userRegistered) == true) return;
+Future<bool> _ensureUserRegistered(String userId) async {
+  final prefs = await SharedPreferences.getInstance();
+  if (prefs.getBool(_userRegistered) == true) return true;
+
+  try {
+    final deviceInfo  = DeviceInfoPlugin();
+    final packageInfo = await PackageInfo.fromPlatform();
+    final appVersion  = packageInfo.version;
+
+    String os          = 'other';
+    String deviceModel = 'unknown';
 
     try {
-      // Recupera info dispositivo
-      final deviceInfo   = DeviceInfoPlugin();
-      final packageInfo  = await PackageInfo.fromPlatform();
-      final appVersion   = packageInfo.version;
-
-      String os          = 'other';
-      String deviceModel = 'unknown';
-
       if (Platform.isAndroid) {
         final info = await deviceInfo.androidInfo;
         os          = 'android';
@@ -65,75 +65,90 @@ class _SupportState extends State<Support> {
         os          = 'ios';
         deviceModel = info.utsname.machine;
       }
-
-      final response = await http.post(
-        Uri.parse(_registerUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id':      userId,
-          'app_version':  appVersion,
-          'os':           os,
-          'device_model': deviceModel,
-        }),
-      ).timeout(const Duration(seconds: 20));
-
-      final body = jsonDecode(response.body);
-      if (response.statusCode == 200 && body['success'] == true) {
-        await prefs.setBool(_userRegistered, true);
-      }
-    } catch (_) {
-      // Registrazione fallita silenziosamente: riproverà al prossimo avvio
+    } catch (e) {
+      debugPrint('⚠️ Device info non disponibile: $e');
     }
+
+    final response = await http.post(
+      Uri.parse(_registerUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id':      userId,
+        'app_version':  appVersion,
+        'os':           os,
+        'device_model': deviceModel,
+      }),
+    ).timeout(const Duration(seconds: 20));
+
+    final body = jsonDecode(response.body);
+    if (response.statusCode == 200 && body['success'] == true) {
+      await prefs.setBool(_userRegistered, true);
+      return true;
+    }
+    return false;
+  } catch (e) {
+    debugPrint('❌ Registrazione fallita: $e');
+    return false;
   }
+}
 
   // ─── Invio ticket ──────────────────────────────────────────────────────────
-  Future<void> _submitTicket(AccessibilityProvider acc) async {
-    if (!_formKey.currentState!.validate()) return;
+Future<void> _submitTicket(AccessibilityProvider acc) async {
+  if (!_formKey.currentState!.validate()) return;
 
-    setState(() => _isLoading = true);
-    acc.triggerHapticFeedback();
+  setState(() => _isLoading = true);
+  acc.triggerHapticFeedback();
 
-    try {
-      final userId = await _getOrCreateUserId();
-      await _ensureUserRegistered(userId);
+  try {
+    final userId = await _getOrCreateUserId();
+    final registered = await _ensureUserRegistered(userId);
 
-      final response = await http.post(
-        Uri.parse(_ticketUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'user_id': userId,
-          'email':   _emailCtrl.text.trim(),
-          'subject': _subjectCtrl.text.trim(),
-          'message': _messageCtrl.text.trim(),
-        }),
-      ).timeout(const Duration(seconds: 20));
-
-      final body = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && body['success'] == true) {
-        acc.speak('Ticket inviato con successo.');
-        _showResultDialog(
-          success: true,
-          message: 'Ticket creato con successo!\nTi risponderemo al più presto.',
-        );
-        _resetForm();
-      } else {
-        acc.speak('Errore durante l\'invio del ticket.');
-        _showResultDialog(
-          success: false,
-          message: body['message'] ?? 'Errore sconosciuto.',
-        );
-      }
-    } catch (e) {
-      acc.speak('Errore di connessione.');
+    if (!registered) {
+      acc.speak('Errore di registrazione.');
       _showResultDialog(
         success: false,
-        message: 'Impossibile connettersi al server.\nControlla la connessione e riprova.',
+        message: 'Impossibile registrare il dispositivo.\nControlla la connessione e riprova.',
       );
-    } finally {
-      setState(() => _isLoading = false);
+      return;
     }
+
+    final response = await http.post(
+      Uri.parse(_ticketUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'user_id': userId,
+        'email':   _emailCtrl.text.trim(),
+        'subject': _subjectCtrl.text.trim(),
+        'message': _messageCtrl.text.trim(),
+      }),
+    ).timeout(const Duration(seconds: 20));
+
+    final body = jsonDecode(response.body);
+
+    if (response.statusCode == 200 && body['success'] == true) {
+      acc.speak('Ticket inviato con successo.');
+      _showResultDialog(
+        success: true,
+        message: 'Ticket creato con successo!\nTi risponderemo al più presto.',
+      );
+      _resetForm();
+    } else {
+      acc.speak('Errore durante l\'invio del ticket.');
+      _showResultDialog(
+        success: false,
+        message: body['message'] ?? 'Errore sconosciuto.',
+      );
+    }
+  } catch (e) {
+    acc.speak('Errore di connessione.');
+    _showResultDialog(
+      success: false,
+      message: 'Impossibile connettersi al server.\nControlla la connessione e riprova.',
+    );
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
 
   void _resetForm() {
     _emailCtrl.clear();
