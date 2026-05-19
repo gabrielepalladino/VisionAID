@@ -17,19 +17,20 @@ class Support extends StatefulWidget {
 }
 
 class _SupportState extends State<Support> {
-  static const String _registerUrl =
-      'https://visionaid.altervista.org/register_user.php';
-  static const String _ticketUrl =
-      'https://visionaid.altervista.org/create_ticket.php';
-  static const String _userIdKey       = 'anonymous_user_id';
-  static const String _userRegistered  = 'user_registered';
+  static const String _registerUrl    = 'https://visionaid.altervista.org/register_user.php';
+  static const String _ticketUrl      = 'https://visionaid.altervista.org/create_ticket.php';
+  static const String _deviceUrl      = 'https://visionaid.altervista.org/register_device.php';
+  static const String _userIdKey      = 'anonymous_user_id';
+  static const String _userRegistered = 'user_registered';
+  static const String _deviceRegistered = 'device_registered';
 
   final _formKey     = GlobalKey<FormState>();
   final _emailCtrl   = TextEditingController();
   final _subjectCtrl = TextEditingController();
   final _messageCtrl = TextEditingController();
 
-  bool _isLoading = false;
+  bool    _isLoading       = false;
+  String? _selectedCategory; // 'app' | 'device'
 
   // ─── Recupera o genera lo user_id persistente ─────────────────────────────
   Future<String> _getOrCreateUserId() async {
@@ -43,117 +44,175 @@ class _SupportState extends State<Support> {
   }
 
   // ─── Registra l'utente al primo avvio (se non già fatto) ──────────────────
-Future<bool> _ensureUserRegistered(String userId) async {
-  final prefs = await SharedPreferences.getInstance();
-  if (prefs.getBool(_userRegistered) == true) return true;
-
-  try {
-    final deviceInfo  = DeviceInfoPlugin();
-    final packageInfo = await PackageInfo.fromPlatform();
-    final appVersion  = packageInfo.version;
-
-    String os          = 'other';
-    String deviceModel = 'unknown';
+  Future<bool> _ensureUserRegistered(String userId, String email) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_userRegistered) == true) return true;
 
     try {
-      if (Platform.isAndroid) {
-        final info = await deviceInfo.androidInfo;
-        os          = 'android';
-        deviceModel = info.model;
-      } else if (Platform.isIOS) {
-        final info = await deviceInfo.iosInfo;
-        os          = 'ios';
-        deviceModel = info.utsname.machine;
+      final deviceInfo  = DeviceInfoPlugin();
+      final packageInfo = await PackageInfo.fromPlatform();
+      final appVersion  = packageInfo.version;
+
+      String os          = 'other';
+      String deviceModel = 'unknown';
+
+      try {
+        if (Platform.isAndroid) {
+          final info = await deviceInfo.androidInfo;
+          os          = 'android';
+          deviceModel = info.model;
+        } else if (Platform.isIOS) {
+          final info = await deviceInfo.iosInfo;
+          os          = 'ios';
+          deviceModel = info.utsname.machine;
+        }
+      } catch (e) {
+        debugPrint('⚠️ Device info non disponibile: $e');
       }
+
+      final response = await http.post(
+        Uri.parse(_registerUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id':      userId,
+          'email':        email,
+          'app_version':  appVersion,
+          'os':           os,
+          'device_model': deviceModel,
+        }),
+      ).timeout(const Duration(seconds: 20));
+
+      final body = jsonDecode(response.body);
+      if (response.statusCode == 200 && body['success'] == true) {
+        await prefs.setBool(_userRegistered, true);
+        return true;
+      }
+      return false;
     } catch (e) {
-      debugPrint('⚠️ Device info non disponibile: $e');
+      debugPrint('❌ Registrazione utente fallita: $e');
+      return false;
     }
-
-    final response = await http.post(
-      Uri.parse(_registerUrl),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'user_id':      userId,
-        'app_version':  appVersion,
-        'os':           os,
-        'device_model': deviceModel,
-      }),
-    ).timeout(const Duration(seconds: 20));
-
-    final body = jsonDecode(response.body);
-    if (response.statusCode == 200 && body['success'] == true) {
-      await prefs.setBool(_userRegistered, true);
-      return true;
-    }
-    return false;
-  } catch (e) {
-    debugPrint('❌ Registrazione fallita: $e');
-    return false;
   }
-}
+
+  // ─── Registra il dispositivo fisico (solo se problema hardware) ───────────
+  Future<bool> _ensureDeviceRegistered(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(_deviceRegistered) == true) return true;
+
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      String internalDeviceId = 'unknown';
+
+      try {
+        if (Platform.isAndroid) {
+          final info = await deviceInfo.androidInfo;
+          internalDeviceId = info.id; // Android hardware ID
+        } else if (Platform.isIOS) {
+          final info = await deviceInfo.iosInfo;
+          internalDeviceId = info.identifierForVendor ?? 'unknown';
+        }
+      } catch (e) {
+        debugPrint('⚠️ Device ID non disponibile: $e');
+      }
+
+      final response = await http.post(
+        Uri.parse(_deviceUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id':            userId,
+          'internal_device_id': internalDeviceId,
+        }),
+      ).timeout(const Duration(seconds: 20));
+
+      final body = jsonDecode(response.body);
+      if (response.statusCode == 200 && body['success'] == true) {
+        await prefs.setBool(_deviceRegistered, true);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('❌ Registrazione device fallita: $e');
+      return false;
+    }
+  }
 
   // ─── Invio ticket ──────────────────────────────────────────────────────────
-Future<void> _submitTicket(AccessibilityProvider acc) async {
-  if (!_formKey.currentState!.validate()) return;
+  Future<void> _submitTicket(AccessibilityProvider acc) async {
+    if (!_formKey.currentState!.validate()) return;
 
-  setState(() => _isLoading = true);
-  acc.triggerHapticFeedback();
+    setState(() => _isLoading = true);
+    acc.triggerHapticFeedback();
 
-  try {
-    final userId = await _getOrCreateUserId();
-    final registered = await _ensureUserRegistered(userId);
+    try {
+      final userId     = await _getOrCreateUserId();
+      final registered = await _ensureUserRegistered(userId, _emailCtrl.text.trim());
 
-    if (!registered) {
-      acc.speak('Errore di registrazione.');
+      if (!registered) {
+        acc.speak('Errore di registrazione.');
+        _showResultDialog(
+          success: false,
+          message: 'Impossibile registrare il dispositivo.\nControlla la connessione e riprova.',
+        );
+        return;
+      }
+
+      // Se il problema riguarda l'hardware, registra il device fisico
+      if (_selectedCategory == 'device') {
+        final deviceOk = await _ensureDeviceRegistered(userId);
+        if (!deviceOk) {
+          acc.speak('Errore registrazione dispositivo.');
+          _showResultDialog(
+            success: false,
+            message: 'Impossibile registrare il dispositivo fisico.\nControlla la connessione e riprova.',
+          );
+          return;
+        }
+      }
+
+      final response = await http.post(
+        Uri.parse(_ticketUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id':  userId,
+          'email':    _emailCtrl.text.trim(),
+          'subject':  _subjectCtrl.text.trim(),
+          'message':  _messageCtrl.text.trim(),
+          'category': _selectedCategory,
+        }),
+      ).timeout(const Duration(seconds: 20));
+
+      final body = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && body['success'] == true) {
+        acc.speak('Ticket inviato con successo.');
+        _showResultDialog(
+          success: true,
+          message: 'Ticket creato con successo!\nTi risponderemo al più presto.',
+        );
+        _resetForm();
+      } else {
+        acc.speak('Errore durante l\'invio del ticket.');
+        _showResultDialog(
+          success: false,
+          message: body['message'] ?? 'Errore sconosciuto.',
+        );
+      }
+    } catch (e) {
+      acc.speak('Errore di connessione.');
       _showResultDialog(
         success: false,
-        message: 'Impossibile registrare il dispositivo.\nControlla la connessione e riprova.',
+        message: 'Impossibile connettersi al server.\nControlla la connessione e riprova.',
       );
-      return;
+    } finally {
+      setState(() => _isLoading = false);
     }
-
-    final response = await http.post(
-      Uri.parse(_ticketUrl),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'user_id': userId,
-        'email':   _emailCtrl.text.trim(),
-        'subject': _subjectCtrl.text.trim(),
-        'message': _messageCtrl.text.trim(),
-      }),
-    ).timeout(const Duration(seconds: 20));
-
-    final body = jsonDecode(response.body);
-
-    if (response.statusCode == 200 && body['success'] == true) {
-      acc.speak('Ticket inviato con successo.');
-      _showResultDialog(
-        success: true,
-        message: 'Ticket creato con successo!\nTi risponderemo al più presto.',
-      );
-      _resetForm();
-    } else {
-      acc.speak('Errore durante l\'invio del ticket.');
-      _showResultDialog(
-        success: false,
-        message: body['message'] ?? 'Errore sconosciuto.',
-      );
-    }
-  } catch (e) {
-    acc.speak('Errore di connessione.');
-    _showResultDialog(
-      success: false,
-      message: 'Impossibile connettersi al server.\nControlla la connessione e riprova.',
-    );
-  } finally {
-    setState(() => _isLoading = false);
   }
-}
 
   void _resetForm() {
     _emailCtrl.clear();
     _subjectCtrl.clear();
     _messageCtrl.clear();
+    setState(() => _selectedCategory = null);
   }
 
   // ─── Dialog risultato ──────────────────────────────────────────────────────
@@ -253,6 +312,7 @@ Future<void> _submitTicket(AccessibilityProvider acc) async {
               ),
               const SizedBox(height: 24),
 
+              // ── Email ──────────────────────────────────────────────────────
               _buildLabel('Email', hc),
               const SizedBox(height: 6),
               _buildTextField(
@@ -270,6 +330,7 @@ Future<void> _submitTicket(AccessibilityProvider acc) async {
               ),
               const SizedBox(height: 16),
 
+              // ── Oggetto ────────────────────────────────────────────────────
               _buildLabel('Oggetto', hc),
               const SizedBox(height: 6),
               _buildTextField(
@@ -284,6 +345,13 @@ Future<void> _submitTicket(AccessibilityProvider acc) async {
               ),
               const SizedBox(height: 16),
 
+              // ── Tipo di problema ───────────────────────────────────────────
+              _buildLabel('Tipo di problema', hc),
+              const SizedBox(height: 6),
+              _buildCategoryDropdown(hc),
+              const SizedBox(height: 16),
+
+              // ── Messaggio ──────────────────────────────────────────────────
               _buildLabel('Messaggio', hc),
               const SizedBox(height: 6),
               _buildTextField(
@@ -298,6 +366,41 @@ Future<void> _submitTicket(AccessibilityProvider acc) async {
               ),
               const SizedBox(height: 32),
 
+              // ── Banner info dispositivo (visibile solo se categoria = device) ──
+              if (_selectedCategory == 'device') ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: hc ? Colors.grey[850] : Colors.blue[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: hc ? Colors.white24 : Colors.blue.shade200,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: hc ? Colors.white70 : Colors.blue[700],
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Il tuo dispositivo verrà registrato automaticamente.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: hc ? Colors.white70 : Colors.blue[800],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // ── Bottone invio ──────────────────────────────────────────────
               SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -335,6 +438,8 @@ Future<void> _submitTicket(AccessibilityProvider acc) async {
       ),
     );
   }
+
+  // ─── Widget helpers ────────────────────────────────────────────────────────
 
   Widget _buildLabel(String text, bool hc) {
     return Text(
@@ -387,12 +492,14 @@ Future<void> _submitTicket(AccessibilityProvider acc) async {
     );
   }
 
-  /*Widget _buildDropdown(bool hc) {
+  Widget _buildCategoryDropdown(bool hc) {
     return DropdownButtonFormField<String>(
       value: _selectedCategory,
       dropdownColor: hc ? Colors.grey[900] : Colors.white,
       style: TextStyle(color: hc ? Colors.white : Colors.black87),
       decoration: InputDecoration(
+        hintText: 'Seleziona il tipo di problema',
+        hintStyle: TextStyle(color: hc ? Colors.white38 : Colors.black38),
         filled: true,
         fillColor: hc ? Colors.grey[900] : Colors.white,
         border: OutlineInputBorder(
@@ -407,42 +514,45 @@ Future<void> _submitTicket(AccessibilityProvider acc) async {
           borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide(color: hc ? Colors.white : Colors.blue, width: 2),
         ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Colors.red),
+        ),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
-      hint: Text(
-        'Seleziona categoria',
-        style: TextStyle(
-          color: hc ? Colors.white38 : Colors.black38,
+      validator: (v) => v == null ? 'Seleziona il tipo di problema' : null,
+      items: [
+        DropdownMenuItem(
+          value: 'app',
+          child: Row(
+            children: [
+              Icon(Icons.phone_android,
+                  size: 18, color: hc ? Colors.white70 : Colors.blue),
+              const SizedBox(width: 10),
+              Text(
+                'Problema con l\'app',
+                style: TextStyle(color: hc ? Colors.white : Colors.black87),
+              ),
+            ],
+          ),
         ),
-      ),
-      validator: (v) => v == null ? 'Seleziona una categoria' : null,
-      items: _categories
-          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-          .toList(),
+        DropdownMenuItem(
+          value: 'device',
+          child: Row(
+            children: [
+              Icon(Icons.device_hub,
+                  size: 18, color: hc ? Colors.white70 : Colors.blue),
+              const SizedBox(width: 10),
+              Text(
+                'Problema con il dispositivo',
+                style: TextStyle(color: hc ? Colors.white : Colors.black87),
+              ),
+            ],
+          ),
+        ),
+      ],
       onChanged: (v) => setState(() => _selectedCategory = v),
     );
   }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String text;
-  final bool hc;
-
-  const _SectionHeader({
-    required this.text,
-    required this.hc,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: TextStyle(
-        fontWeight: FontWeight.bold,
-        color: hc ? Colors.white : Colors.black87,
-      ),
-    );
-  }
-}*/
 }

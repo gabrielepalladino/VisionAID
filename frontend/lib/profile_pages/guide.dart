@@ -101,17 +101,8 @@ class GuidaScreen extends StatelessWidget {
           domanda: 'Cosa devo inserire nel modulo di supporto?',
           risposta:
               'Il modulo richiede: il tuo indirizzo email (obbligatorio), '
-              'un numero di telefono facoltativo, la categoria del problema '
-              '(es. problema tecnico, errore nell\'app, richiesta funzionalità), '
-              'una descrizione dettagliata del problema e, se utile, uno screenshot.',
-        ),
-        _FAQ(
-          domanda: 'Come allego uno screenshot?',
-          risposta:
-              'Nel modulo di supporto trovi il pulsante "Aggiungi screenshot". '
-              'Toccalo per aprire la galleria del dispositivo e selezionare '
-              'un\'immagine. Puoi rimuovere lo screenshot selezionato toccando '
-              'la X in alto a destra sull\'anteprima.',
+              'la categoria del problema '
+              'e una descrizione dettagliata del problema',
         ),
         _FAQ(
           domanda: 'Come faccio a sapere se il ticket è stato ricevuto?',
@@ -192,19 +183,6 @@ class GuidaScreen extends StatelessWidget {
 
           // Sezioni
           ..._sezioni.map((s) => _SezioneWidget(sezione: s, hc: hc, acc: acc)),
-
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              'Non hai trovato quello che cercavi?\nContattaci dalla sezione Supporto.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: hc ? Colors.white38 : Colors.black38,
-                height: 1.6,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
         ],
       ),
     );
