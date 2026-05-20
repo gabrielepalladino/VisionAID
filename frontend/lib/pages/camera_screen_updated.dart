@@ -147,8 +147,8 @@ class _CameraScreenState extends State<CameraScreen> {
   late CameraController _cam;
   WebSocketChannel? _channel;
   List<Alert> _currentAlerts = [];
-  List<Alert> _persistentAlerts = []; // Bbox persistenti
-  String? _notificationMessage; // Notifica CRITICAL
+  List<Alert> _persistentAlerts = [];
+  String? _notificationMessage;
   String _status = 'Disconnesso';
   bool _connected = false;
   Timer? _captureTimer;
