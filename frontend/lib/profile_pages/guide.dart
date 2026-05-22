@@ -21,22 +21,15 @@ class GuidaScreen extends StatelessWidget {
           domanda: 'Come torno alla schermata principale?',
           risposta:
               'Puoi tornare alla Home in qualsiasi momento premendo il pulsante '
-              '"Indietro" del dispositivo oppure la freccia in alto a sinistra '
-              'nella barra superiore dell\'app.',
+              '"Indietro", la freccia in alto a sinistra nella barra superiore dell\'app'
+              'o cliccando sull\'icona "detect" in basso a sinistra',
         ),
         _FAQ(
           domanda: 'Come accedo alle Novità?',
           risposta:
-              'Dalla schermata principale, tocca la voce "Novità". Qui troverai '
+              'Dalla schermata principale, tocca "Profilo" e poi "Novità". Qui troverai '
               'l\'elenco degli aggiornamenti recenti con la versione di riferimento '
               'e una descrizione delle modifiche introdotte.',
-        ),
-        _FAQ(
-          domanda: 'Come accedo alle Informazioni sull\'app?',
-          risposta:
-              'Dal menu principale, seleziona "Informazioni". Troverai il numero '
-              'di versione, il numero di build, le note legali e i link utili '
-              'come la Privacy Policy e i Termini e condizioni.',
         ),
       ],
     ),
@@ -48,7 +41,7 @@ class GuidaScreen extends StatelessWidget {
         _FAQ(
           domanda: 'Come attivo l\'alto contrasto?',
           risposta:
-              'Vai nelle Impostazioni dell\'app e cerca la voce "Alto contrasto". '
+              'Vai in "Accessibilità" e cerca la voce "Alto contrasto". '
               'Attivandola, l\'interfaccia passerà a colori ad alto contrasto '
               '(sfondo nero e testo bianco) per migliorare la leggibilità in '
               'condizioni di scarsa illuminazione o per utenti con difficoltà visive.',
@@ -64,7 +57,7 @@ class GuidaScreen extends StatelessWidget {
         _FAQ(
           domanda: 'Come cambio la dimensione del testo?',
           risposta:
-              'Nelle Impostazioni trovi il cursore "Dimensione testo" che ti '
+              'In "Accessibilità" trovi il cursore "Dimensione testo" che ti '
               'permette di aumentare o ridurre la dimensione dei caratteri in '
               'tutta l\'app. La modifica viene applicata immediatamente.',
         ),
@@ -73,8 +66,7 @@ class GuidaScreen extends StatelessWidget {
           risposta:
               'Il feedback aptico produce una leggera vibrazione del dispositivo '
               'ogni volta che esegui un\'azione (tocco di un pulsante, invio di '
-              'un modulo, ecc.). Puoi disattivarlo dalle Impostazioni se preferisci '
-              'non averlo.',
+              'un modulo, ecc.). Puoi disattivarlo andando in "Profilo" poi "Impostazioni generali" e infine "Feedback aptico"',
         ),
         _FAQ(
           domanda: 'Le impostazioni di accessibilità vengono salvate?',
@@ -93,22 +85,14 @@ class GuidaScreen extends StatelessWidget {
         _FAQ(
           domanda: 'Come contatto il supporto?',
           risposta:
-              'Dal menu principale seleziona "Supporto". Si aprirà un modulo '
+              'Va in "Profilo" poi clicca "Supporto". Si aprirà un modulo '
               'attraverso cui potrai inviare una richiesta di assistenza '
               'direttamente al nostro team.',
         ),
         _FAQ(
-          domanda: 'Cosa devo inserire nel modulo di supporto?',
-          risposta:
-              'Il modulo richiede: il tuo indirizzo email (obbligatorio), '
-              'la categoria del problema '
-              'e una descrizione dettagliata del problema',
-        ),
-        _FAQ(
           domanda: 'Come faccio a sapere se il ticket è stato ricevuto?',
           risposta:
-              'Dopo l\'invio, comparirà un messaggio di conferma con il numero '
-              'del ticket assegnato. Riceverai aggiornamenti all\'indirizzo email '
+              'Dopo l\'invio, comparirà un messaggio di conferma. Riceverai aggiornamenti all\'indirizzo email '
               'che hai indicato nel modulo.',
         ),
         _FAQ(

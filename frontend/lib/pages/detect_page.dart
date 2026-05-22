@@ -380,7 +380,7 @@ class _DetectPageState extends State<DetectPage> {
       // System sound — only for critical
       if (alert.risk == RiskLevel.critical) {
         _AlertHandler.triggerSound();
-        _showNotification('⚠️ PERICOLO CRITICO!\n${alert.cls.toUpperCase()}');
+        _showNotification('PERICOLO CRITICO!\n${alert.cls.toUpperCase()}');
       }
 
       // Persistent bbox
@@ -511,7 +511,7 @@ class _DetectPageState extends State<DetectPage> {
               ),
               const SizedBox(height: 16),
               const Text(
-                '🚨 PERICOLO IMMINENTE! 🚨',
+                'PERICOLO IMMINENTE!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: Colors.white,
