@@ -263,7 +263,7 @@ class _CameraScreenState extends State<CameraScreen> {
       // NOTIFICA SOLO PER CRITICAL
       // =========================================================================
       if (alert.risk == RiskLevel.critical) {
-        _showNotification("⚠️ PERICOLO CRITICO!\n${alert.cls.toUpperCase()}");
+        _showNotification("PERICOLO CRITICO!\n${alert.cls.toUpperCase()}");
       }
 
       // Bbox persistente per TUTTI i risk levels
@@ -412,7 +412,7 @@ class _CameraScreenState extends State<CameraScreen> {
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        '🚨 PERICOLO IMMINENTE! 🚨',
+                        'PERICOLO IMMINENTE!',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Colors.white,
