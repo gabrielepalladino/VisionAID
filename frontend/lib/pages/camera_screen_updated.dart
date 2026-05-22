@@ -162,6 +162,8 @@ class _CameraScreenState extends State<CameraScreen> {
   void initState() {
     super.initState();
     _initCamera();
+    // ✅ AUTO-CONNESSIONE al server quando l'app si avvia
+    Future.delayed(const Duration(milliseconds: 500), _connect);
   }
 
   Future<void> _initCamera() async {
@@ -367,47 +369,7 @@ class _CameraScreenState extends State<CameraScreen> {
           if (_persistentAlerts.isNotEmpty)
             CustomPaint(painter: AlertBoxPainter(_persistentAlerts)),
 
-          // Status bar superiore
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.black87,
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      _connected ? Icons.circle : Icons.circle_outlined,
-                      color: _connected ? Colors.greenAccent : Colors.grey,
-                      size: 12,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _status,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      'Frame: $_frameCount | Tracciati: $_trackedCount',
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          // ✅ RIMOSSA LA BARRA SUPERIORE CON LO STATO DI CONNESSIONE
 
           // NOTIFICA CRITICA (Grande, al centro) - SOLO PER CRITICAL
           if (_notificationMessage != null)
@@ -464,27 +426,7 @@ class _CameraScreenState extends State<CameraScreen> {
               ),
             ),
 
-          // Connect/Disconnect button
-          Positioned(
-            bottom: 32,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: ElevatedButton.icon(
-                onPressed: _connected ? _disconnect : _connect,
-                icon: Icon(_connected ? Icons.stop : Icons.play_arrow),
-                label: Text(_connected ? 'Stop' : 'Connetti'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _connected ? Colors.redAccent : Colors.greenAccent,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          // ✅ RIMOSSO IL TASTO CONNETTI/STOP - La connessione è automatica
         ],
       ),
     );

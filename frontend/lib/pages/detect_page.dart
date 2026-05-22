@@ -195,6 +195,7 @@ class _DetectPageState extends State<DetectPage> {
   Timer? _captureTimer;
   Timer? _persistenceTimer;
   Timer? _notificationTimer;
+  Timer? _connectTimer;
 
   // ── Accessibility ──────────────────────────────────────────────────────────
   AccessibilityProvider get _ap =>
@@ -206,10 +207,23 @@ class _DetectPageState extends State<DetectPage> {
   void initState() {
     super.initState();
     _initCamera();
+    // ✅ AUTO-CONNESSIONE: controlla periodicamente se la camera è pronta
+    _setupAutoConnect();
+  }
+
+  void _setupAutoConnect() {
+    _connectTimer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
+      if (_cameraReady && !_connected) {
+        timer.cancel();
+        _connect();
+        debugPrint('[VisionAID] Auto-connect triggered');
+      }
+    });
   }
 
   @override
   void dispose() {
+    _connectTimer?.cancel();
     _teardown();
     _cam?.dispose();
     super.dispose();
@@ -235,6 +249,7 @@ class _DetectPageState extends State<DetectPage> {
         _cam = controller;
         _cameraReady = true;
       });
+      debugPrint('[VisionAID] Camera initialized');
     } catch (e) {
       if (!mounted) return;
       setState(() => _cameraError = 'Impossibile inizializzare la fotocamera: $e');
@@ -245,7 +260,10 @@ class _DetectPageState extends State<DetectPage> {
   // ── WebSocket connect / disconnect ─────────────────────────────────────────
 
   void _connect() {
-    if (!_cameraReady) return;
+    if (!_cameraReady) {
+      debugPrint('[VisionAID] Camera not ready, skipping connect');
+      return;
+    }
     try {
       _channel = WebSocketChannel.connect(Uri.parse(_wsUrl));
       setState(() {
@@ -421,15 +439,9 @@ class _DetectPageState extends State<DetectPage> {
           if (_persistentAlerts.isNotEmpty)
             CustomPaint(painter: _AlertBoxPainter(_persistentAlerts)),
 
-          // ── Top status bar ───────────────────────────────────────────────
-          _buildStatusBar(hc),
-
           // ── Critical notification overlay ────────────────────────────────
           if (_notificationMessage != null)
             _buildCriticalOverlay(_notificationMessage!),
-
-          // ── Connect / Disconnect button ──────────────────────────────────
-          _buildConnectButton(hc),
         ],
       ),
     );
@@ -458,44 +470,6 @@ class _DetectPageState extends State<DetectPage> {
                   color: hc ? Colors.white70 : Colors.black54,
                   fontSize: 16,
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatusBar(bool hc) {
-    return Positioned(
-      top: 0,
-      left: 0,
-      right: 0,
-      child: SafeArea(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          color: Colors.black87,
-          child: Row(
-            children: [
-              Icon(
-                _connected ? Icons.circle : Icons.circle_outlined,
-                color: _connected ? Colors.greenAccent : Colors.grey,
-                size: 11,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  _status,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500),
-                ),
-              ),
-              Text(
-                'Frame: $_frameCount  |  Tracciati: $_trackedCount',
-                style:
-                    const TextStyle(color: Colors.white60, fontSize: 11),
               ),
             ],
           ),
@@ -545,36 +519,6 @@ class _DetectPageState extends State<DetectPage> {
                     fontWeight: FontWeight.bold),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildConnectButton(bool hc) {
-    return Positioned(
-      bottom: 32,
-      left: 0,
-      right: 0,
-      child: Semantics(
-        button: true,
-        label: _connected
-            ? 'Ferma rilevamento'
-            : 'Avvia rilevamento',
-        child: Center(
-          child: ElevatedButton.icon(
-            onPressed: _connected ? _disconnect : _connect,
-            icon: Icon(_connected ? Icons.stop : Icons.play_arrow),
-            label: Text(_connected ? 'Stop' : 'Connetti'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor:
-                  _connected ? Colors.redAccent : Colors.greenAccent,
-              foregroundColor: Colors.black,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30)),
-            ),
           ),
         ),
       ),
