@@ -24,7 +24,7 @@ void main() async {
 
   runApp(
     DevicePreview(
-      enabled: !kReleaseMode,
+      enabled: false,
       builder: (context) => ChangeNotifierProvider.value(
         value: accessibilityProvider,
         child: const MyApp(),

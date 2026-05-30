@@ -9,9 +9,6 @@ class AccessibilityPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final accessibilityProvider = Provider.of<AccessibilityProvider>(context);
 
-    // Se l'alto contrasto è attivo, usiamo uno Scaffold con sfondo nero.
-    // Se preferisci gestire lo sfondo solo tramite il MaterialApp (punto 1),
-    // puoi rimuovere il parametro backgroundColor qui sotto.
     return Scaffold(
       backgroundColor: accessibilityProvider.highContrast ? Colors.black : null,
       body: SafeArea(
@@ -55,10 +52,8 @@ class AccessibilityPage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        // Se alto contrasto, lo sfondo del box è nero, altrimenti usa il colore del tema
         color: isHighContrast ? Colors.grey[900] : Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(12),
-        // Bordo bianco in alto contrasto
         border: isHighContrast ? Border.all(color: Colors.white, width: 2) : null,
       ),
       child: Column(
@@ -99,9 +94,9 @@ class AccessibilityPage extends StatelessWidget {
                       'Dimensione testo ${value.round()}',
                     );
                   },
-                  // Colori dello slider in alto contrasto
-                  activeColor: isHighContrast ? Colors.grey[800] : null,
-                  inactiveColor: isHighContrast ? Colors.white : null,
+                  // ✅ CORRETTO: Slider colori invertiti per alto contrasto
+                  activeColor: isHighContrast ? Colors.white : null,
+                  inactiveColor: isHighContrast ? Colors.grey[700] : null,
                   thumbColor: isHighContrast ? Colors.white : null,
                 ),
               ),
@@ -206,15 +201,15 @@ class AccessibilityPage extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-            // Personalizzazione dello switch per l'alto contrasto
-            activeColor: isHighContrast ? Colors.white : null,
-            activeTrackColor: isHighContrast ? Colors.grey[800] : Colors.white,
-            inactiveThumbColor: isHighContrast ? Colors.white24 : null,
-            inactiveTrackColor: isHighContrast ? Colors.white10 : null,
-          ),
+Switch(
+  value: value,
+  onChanged: onChanged,
+  // ✅ CORRETTO: Thumb bianco, track blu (primario)
+  activeColor: isHighContrast ? Colors.white : null,
+  activeTrackColor: isHighContrast ? Colors.grey : null,
+  inactiveThumbColor: isHighContrast ? Colors.white24 : null,
+  inactiveTrackColor: isHighContrast ? Colors.grey[800] : null,
+),
         ],
       ),
     );
