@@ -6,6 +6,7 @@
 // @dart = 2.13
 // ignore_for_file: type=lint
 
+import 'package:audioplayers_web/audioplayers_web.dart';
 import 'package:camera_web/camera_web.dart';
 import 'package:device_info_plus/src/device_info_plus_web.dart';
 import 'package:flutter_tts/flutter_tts_web.dart';
@@ -16,6 +17,7 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
 void registerPlugins([final Registrar? pluginRegistrar]) {
   final Registrar registrar = pluginRegistrar ?? webPluginRegistrar;
+  AudioplayersPlugin.registerWith(registrar);
   CameraPlugin.registerWith(registrar);
   DeviceInfoPlusWebPlugin.registerWith(registrar);
   FlutterTtsPlugin.registerWith(registrar);

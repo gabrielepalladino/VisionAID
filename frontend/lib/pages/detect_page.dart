@@ -7,8 +7,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-
+import 'package:audioplayers/audioplayers.dart';
 import 'package:main_app/pages/accessibility_provider.dart';
+import 'package:vibration/vibration.dart';
 
 // ============================================================================
 // ENUMS & DATA MODELS
@@ -111,43 +112,23 @@ class ServerResponse {
 // HAPTIC & AUDIO HANDLER
 // ============================================================================
 
-class _AlertHandler {
-  _AlertHandler._();
+class AlertHandler {
+  
 
-  /// Vibration pattern scaled to risk level.
-  static Future<void> triggerVibration(RiskLevel risk) async {
+  static Future<void> triggerCriticalAlert() async {
     try {
-      switch (risk) {
-        case RiskLevel.critical:
-          for (int i = 0; i < 3; i++) {
-            await HapticFeedback.heavyImpact();
-            if (i < 2) await Future.delayed(const Duration(milliseconds: 150));
-          }
-        case RiskLevel.high:
-          for (int i = 0; i < 2; i++) {
-            await HapticFeedback.mediumImpact();
-            if (i < 1) await Future.delayed(const Duration(milliseconds: 150));
-          }
-        case RiskLevel.medium:
-          await HapticFeedback.lightImpact();
-        case RiskLevel.low:
-        case RiskLevel.safe:
-          break;
+      // Vibrazione intensa
+      if (await Vibration.hasVibrator() ?? false) {
+        Vibration.vibrate(
+          pattern: [0, 500, 200, 500, 200, 500],
+          intensities: [255, 255, 255],
+        );
       }
-    } catch (e) {
-      debugPrint('[VisionAID] Haptic error: $e');
-    }
-  }
 
-  /// System beep sequence for critical alerts.
-  static Future<void> triggerSound() async {
-    for (int i = 0; i < 3; i++) {
-      try {
-        await SystemChannels.platform.invokeMethod('Vibrator.vibrate', [100]);
-      } catch (_) {
-        await HapticFeedback.heavyImpact();
-      }
-      if (i < 2) await Future.delayed(const Duration(milliseconds: 200));
+      // Suono di emergenza
+
+    } catch (e) {
+      debugPrint('[ALERT] Errore: $e');
     }
   }
 }
@@ -370,7 +351,7 @@ class _DetectPageState extends State<DetectPage> {
       debugPrint('[VisionAID] [${alert.risk.name}] ${alert.cls}: ${alert.message}');
 
       // Haptic — always for medium+ risk
-      _AlertHandler.triggerVibration(alert.risk);
+      AlertHandler.triggerCriticalAlert();
 
       // Audio feedback via TTS (uses AccessibilityProvider voiceGuidance)
       if (alert.risk == RiskLevel.critical || alert.risk == RiskLevel.high) {
@@ -378,10 +359,18 @@ class _DetectPageState extends State<DetectPage> {
       }
 
       // System sound — only for critical
-      if (alert.risk == RiskLevel.critical) {
-        _AlertHandler.triggerSound();
-        _showNotification('PERICOLO CRITICO!\n${alert.cls.toUpperCase()}');
-      }
+if (alert.risk == RiskLevel.critical) {
+        AlertHandler.triggerCriticalAlert();
+        final AudioPlayer _player = AudioPlayer();
+        _player.play(
+        AssetSource('sounds/emergency_alarm.wav'),
+        volume: 1.0,
+      );
+
+  _showNotification(
+    'PERICOLO IMMINENTE!\n${alert.cls.toUpperCase()}',
+  );
+}
 
       // Persistent bbox
       _persistenceTimer?.cancel();
